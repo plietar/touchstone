@@ -11,6 +11,8 @@ branch_install_impl <- function(branch = "main",
                                 path_pkg = ".",
                                 install_dependencies = FALSE) {
   local_git_checkout(branch, path_pkg)
+  gh_cat(glue::glue("::group::Installing branch: {branch}\n\n"))
+  withr::defer(gh_cat("::endgroup::\n"))
   if (getOption("touchstone.skip_install", FALSE)) {
     cli::cli_alert_info(
       "R option {.envvar touchstone.skip_install} is set, skipping installation."
@@ -25,16 +27,8 @@ branch_install_impl <- function(branch = "main",
       force = !cache_up_to_date(branch, path_pkg)
     )
     withr::local_options(warn = 2)
-    rlang::try_fetch(
-      {
-        install_missing_deps(path_pkg = path_pkg, quiet = TRUE)
-        install_local(quiet = TRUE)
-      },
-      error = function(e) {
-        install_missing_deps(path_pkg = path_pkg, quiet = FALSE)
-        install_local(quiet = FALSE)
-      }
-    )
+    install_missing_deps(path_pkg = path_pkg)
+    install_local()
     cache_update(branch, path_pkg)
     cli::cli_alert_success("Installed branch {.val {branch}} into {.path {libpath[1]}}.")
     libpath
